@@ -8,6 +8,14 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.ipfs.nftstorage.link" },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/.well-known/farcaster.json",
+        destination: "/api/farcaster-manifest",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
