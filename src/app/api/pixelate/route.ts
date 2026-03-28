@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withX402 } from "x402-next";
 import { pixelateServer } from "@/lib/pixelateServer";
 
-export async function POST(request: NextRequest) {
+const agentWalletAddress = process.env.AGENT_WALLET_ADDRESS as `0x${string}`;
+
+const handler = async (request: NextRequest) => {
   try {
     const formData = await request.formData();
     const imageFile = formData.get("image") as File | null;
@@ -42,4 +45,18 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+};
+
+export const POST = withX402(
+  handler,
+  agentWalletAddress,
+  {
+    price: "$0.01",
+    network: "base-sepolia",
+    config: {
+      description: "Pixelon pixel art generator",
+      mimeType: "image/png",
+      maxTimeoutSeconds: 60,
+    },
+  }
+);
