@@ -18,9 +18,9 @@ export async function GET() {
       splashBackgroundColor: "#0A0A1A",
       subtitle: "Pixel Art NFTs on Base",
       description:
-        "Transform any image into pixel art and mint as NFT on Base. Upload a photo or generate with AI, customize the pixel style, then mint via Zora with low gas fees.",
+        "Transform any image into pixel art and mint as NFT on Base.",
       primaryCategory: "developer-tools",
-      tags: ["pixel-art", "nft", "base", "zora", "ai", "creative"],
+      tags: ["pixel-art", "nft", "base", "zora"],
       enabled: true,
     },
   });
