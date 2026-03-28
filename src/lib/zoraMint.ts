@@ -37,24 +37,26 @@ export interface MintProgress {
 }
 
 // ============================================
-// IPFS Upload (nft.storage)
+// IPFS Upload (Pinata)
 // ============================================
 
 /**
- * Upload a blob (image) to IPFS via nft.storage.
+ * Upload a blob (image) to IPFS via Pinata.
  * Returns the IPFS CID.
  */
 export async function uploadToIPFS(
   blob: Blob,
-  apiToken: string
+  jwtToken: string
 ): Promise<string> {
-  const response = await fetch("https://api.nft.storage/upload", {
+  const formData = new FormData();
+  formData.append("file", blob, "pixelon.png");
+
+  const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiToken}`,
-      "Content-Type": blob.type || "image/png",
+      Authorization: `Bearer ${jwtToken}`,
     },
-    body: blob,
+    body: formData,
   });
 
   if (!response.ok) {
@@ -63,20 +65,34 @@ export async function uploadToIPFS(
   }
 
   const data = await response.json();
-  return data.value.cid;
+  return data.IpfsHash;
 }
 
 /**
- * Upload JSON metadata to IPFS.
+ * Upload JSON metadata to IPFS via Pinata.
  */
 export async function uploadMetadataToIPFS(
   metadata: NFTMetadata,
-  apiToken: string
+  jwtToken: string
 ): Promise<string> {
-  const blob = new Blob([JSON.stringify(metadata)], {
-    type: "application/json",
+  const response = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${jwtToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      pinataContent: metadata,
+    }),
   });
-  return uploadToIPFS(blob, apiToken);
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Metadata upload failed: ${errText}`);
+  }
+
+  const data = await response.json();
+  return data.IpfsHash;
 }
 
 // ============================================

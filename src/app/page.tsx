@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useSwitchChain } from "wagmi";
+import { useEffect } from "react";
 import { WalletButton } from "@/components/WalletButton";
 import { UploadSection } from "@/components/UploadSection";
 import { PromptSection } from "@/components/PromptSection";
@@ -13,7 +14,8 @@ import type { PixelateOptions } from "@/lib/pixelate";
 type TabMode = "upload" | "ai";
 
 export default function Home() {
-  const { isConnected } = useAccount();
+  const { isConnected, chain } = useAccount();
+  const { switchChain } = useSwitchChain();
 
   // Active tab
   const [activeTab, setActiveTab] = useState<TabMode>("upload");
@@ -32,6 +34,16 @@ export default function Home() {
 
   // Canvas ref for minting
   const [pixelCanvas, setPixelCanvas] = useState<HTMLCanvasElement | null>(null);
+  // Auto switch to Base Mainnet
+  useEffect(() => {
+    if (isConnected && chain && chain.id !== 8453) {
+      try {
+        switchChain({ chainId: 8453 });
+      } catch (e) {
+        console.error("Auto switch failed:", e);
+      }
+    }
+  }, [isConnected, chain]);
 
   const handleImageLoaded = useCallback((dataUrl: string) => {
     setImageSource(dataUrl);

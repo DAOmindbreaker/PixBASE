@@ -36,7 +36,6 @@ export function PromptSection({ onImageGenerated, disabled }: PromptSectionProps
     setError(null);
     setProgress(0);
 
-    // Fake progress animation
     const progressInterval = setInterval(() => {
       setProgress((p) => Math.min(p + Math.random() * 8, 90));
     }, 500);
@@ -57,7 +56,6 @@ export function PromptSection({ onImageGenerated, disabled }: PromptSectionProps
       recordGeneration();
       setProgress(100);
 
-      // Small delay so user sees 100%
       setTimeout(() => {
         onImageGenerated(data.imageUrl);
         setIsGenerating(false);
@@ -136,11 +134,10 @@ export function PromptSection({ onImageGenerated, disabled }: PromptSectionProps
               <path d="M2 17l10 5 10-5" />
               <path d="M2 12l10 5 10-5" />
             </svg>
-            Generate with AI
+            Generate with AI (Free)
           </>
         )}
 
-        {/* Progress bar overlay */}
         {isGenerating && (
           <div
             className="absolute left-0 bottom-0 h-0.5 bg-base-mint transition-all duration-300"
@@ -149,11 +146,16 @@ export function PromptSection({ onImageGenerated, disabled }: PromptSectionProps
         )}
       </button>
 
-      {/* Rate limit indicator */}
+      {/* Rate limit + free badge */}
       <div className="flex items-center justify-between">
-        <p className="text-[10px] text-gray-600">
-          {remaining}/{maxGen} generations remaining today
-        </p>
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] bg-base-mint/10 text-base-mint px-1.5 py-0.5 rounded font-display">
+            FREE
+          </span>
+          <p className="text-[10px] text-gray-600">
+            {remaining}/{maxGen} generations remaining today
+          </p>
+        </div>
         <div className="flex gap-0.5">
           {Array.from({ length: maxGen }).map((_, i) => (
             <div

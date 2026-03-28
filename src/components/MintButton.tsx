@@ -34,16 +34,16 @@ export function MintButton({ canvas, pixelSize, colorLimit, mode, prompt }: Mint
     hash: txHash,
   });
 
-  const nftStorageToken = process.env.NEXT_PUBLIC_NFT_STORAGE_TOKEN || "";
+  const pinataJwt = process.env.NEXT_PUBLIC_PINATA_JWT || "";
 
   const handleMint = async () => {
-    if (!canvas || !address || !nftStorageToken) return;
+    if (!canvas || !address || !pinataJwt) return;
 
     try {
       // Step 1: Upload image to IPFS
       setProgress({ step: "uploading_image", message: "Uploading pixel art to IPFS…" });
       const imageBlob = await canvasToBlob(canvas);
-      const imageCID = await uploadToIPFS(imageBlob, nftStorageToken);
+      const imageCID = await uploadToIPFS(imageBlob, pinataJwt);
 
       // Step 2: Build & upload metadata
       setProgress({ step: "uploading_metadata", message: "Uploading NFT metadata…" });
@@ -56,7 +56,7 @@ export function MintButton({ canvas, pixelSize, colorLimit, mode, prompt }: Mint
         mode,
         prompt,
       });
-      const metadataCID = await uploadMetadataToIPFS(metadata, nftStorageToken);
+      const metadataCID = await uploadMetadataToIPFS(metadata, pinataJwt);
 
       // Step 3: Mint via Zora
       setProgress({ step: "minting", message: "Sending mint transaction…" });
@@ -213,9 +213,9 @@ export function MintButton({ canvas, pixelSize, colorLimit, mode, prompt }: Mint
               </button>
             </div>
 
-            {!nftStorageToken && (
+            {!pinataJwt && (
               <p className="text-[10px] text-amber-400/80">
-                ⚠ NFT_STORAGE_TOKEN not set. Configure in .env.local
+                ⚠ PINATA_JWT not set. Configure in .env.local
               </p>
             )}
           </div>
