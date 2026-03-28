@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import {
   uploadToIPFS,
   uploadMetadataToIPFS,
   buildMetadata,
   getBasescanURL,
-  getZoraURL,
   ZORA_1155_CREATOR_ADDRESS,
   ZORA_CREATOR_ABI,
   type MintProgress,
@@ -20,36 +19,86 @@ interface MintButtonProps {
   colorLimit: number;
   mode: "upload" | "ai";
   prompt?: string;
+  onMintComplete?: () => void;
 }
 
-export function MintButton({ canvas, pixelSize, colorLimit, mode, prompt }: MintButtonProps) {
+export function MintButton({
+  canvas,
+  pixelSize,
+  colorLimit,
+  mode,
+  prompt,
+  onMintComplete,
+}: MintButtonProps) {
   const { address, isConnected } = useAccount();
   const [progress, setProgress] = useState<MintProgress | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
-  const { writeContract, data: txHash, isPending: isMinting } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash: txHash,
-  });
+  const {
+    writeContract,
+    data: txHash,
+    isPending: isMinting,
+    isError: isTxError,
+    error: txError,
+    reset: resetTx,
+  } = useWriteContract();
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({ hash: txHash });
 
   const pinataJwt = process.env.NEXT_PUBLIC_PINATA_JWT || "";
+
+  // --- state transitions in useEffect (NOT in render body) ---
+
+  useEffect(() => {
+    if (txHash && progress?.step === "minting") {
+      setProgress({ step: "confirming", message: "Waiting for confirmation\u2026", txHash });
+    }
+  }, [txHash, progress?.step]);
+
+  useEffect(() => {
+    if (isConfirmed && progress?.step === "confirming") {
+      setProgress({ step: "done", message: "NFT minted successfully!", txHash });
+    }
+  }, [isConfirmed, progress?.step, txHash]);
+
+  useEffect(() => {
+    if (
+      isTxError &&
+      progress !== null &&
+      progress.step !== "done" &&
+      progress.step !== "error"
+    ) {
+      const raw = txError?.message ?? "Transaction failed";
+      const cancelled =
+        raw.includes("User rejected") ||
+        raw.includes("user rejected") ||
+        raw.includes("User denied") ||
+        raw.includes("ACTION_REJECTED");
+
+      setProgress({
+        step: "error",
+        message: cancelled ? "Transaction cancelled by user" : raw.slice(0, 120),
+      });
+    }
+  }, [isTxError, txError, progress]);
+
+  // --- handlers ---
 
   const handleMint = async () => {
     if (!canvas || !address || !pinataJwt) return;
 
     try {
-      // Step 1: Upload image to IPFS
-      setProgress({ step: "uploading_image", message: "Uploading pixel art to IPFS…" });
+      setProgress({ step: "uploading_image", message: "Uploading pixel art to IPFS\u2026" });
       const imageBlob = await canvasToBlob(canvas);
       const imageCID = await uploadToIPFS(imageBlob, pinataJwt);
 
-      // Step 2: Build & upload metadata
-      setProgress({ step: "uploading_metadata", message: "Uploading NFT metadata…" });
+      setProgress({ step: "uploading_metadata", message: "Uploading NFT metadata\u2026" });
       const metadata = buildMetadata({
         name: name || "Pixelon Creation",
-        description: description || `Pixel art created with Pixelon on Base`,
+        description: description || "Pixel art created with Pixelon on Base",
         imageCID,
         pixelSize,
         colorLimit,
@@ -58,8 +107,7 @@ export function MintButton({ canvas, pixelSize, colorLimit, mode, prompt }: Mint
       });
       const metadataCID = await uploadMetadataToIPFS(metadata, pinataJwt);
 
-      // Step 3: Mint via Zora
-      setProgress({ step: "minting", message: "Sending mint transaction…" });
+      setProgress({ step: "minting", message: "Confirm in your wallet\u2026" });
 
       writeContract({
         address: ZORA_1155_CREATOR_ADDRESS,
@@ -70,7 +118,7 @@ export function MintButton({ canvas, pixelSize, colorLimit, mode, prompt }: Mint
           name || "Pixelon Creation",
           {
             royaltyMintSchedule: 0,
-            royaltyBPS: 500, // 5% royalty
+            royaltyBPS: 500,
             royaltyRecipient: address,
           },
           address,
@@ -86,23 +134,19 @@ export function MintButton({ canvas, pixelSize, colorLimit, mode, prompt }: Mint
     }
   };
 
-  // Update progress when tx is submitted
-  if (txHash && progress?.step === "minting") {
-    setProgress({
-      step: "confirming",
-      message: "Waiting for confirmation…",
-      txHash,
-    });
-  }
+  const handleReset = useCallback(() => {
+    const wasDone = progress?.step === "done";
+    setProgress(null);
+    setShowForm(false);
+    setName("");
+    setDescription("");
+    resetTx();
+    if (wasDone && onMintComplete) {
+      onMintComplete();
+    }
+  }, [resetTx, onMintComplete, progress?.step]);
 
-  // Update progress when confirmed
-  if (isConfirmed && progress?.step === "confirming") {
-    setProgress({
-      step: "done",
-      message: "NFT minted successfully!",
-      txHash,
-    });
-  }
+  // --- early returns ---
 
   if (!isConnected) {
     return (
@@ -120,11 +164,24 @@ export function MintButton({ canvas, pixelSize, colorLimit, mode, prompt }: Mint
     );
   }
 
+  // --- derive step state for progress UI ---
+
+  const allSteps: MintProgress["step"][] = [
+    "uploading_image",
+    "uploading_metadata",
+    "minting",
+    "confirming",
+    "done",
+  ];
+  const currentIdx = progress ? allSteps.indexOf(progress.step) : -1;
+  const isError = progress?.step === "error";
+
+  // --- render ---
+
   return (
     <div className="space-y-4">
-      {/* Mint Card */}
-      <div className="p-5 bg-gradient-to-br from-[#111122] to-[#0d0d1a]
-                      border border-[#2a2a40] rounded-2xl space-y-4">
+      <div className="p-5 bg-gradient-to-br from-[#111122] to-[#0d0d1a] border border-[#2a2a40] rounded-2xl space-y-4">
+        {/* header */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-base-blue/10 flex items-center justify-center">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0052FF" strokeWidth="1.5">
@@ -139,14 +196,11 @@ export function MintButton({ canvas, pixelSize, colorLimit, mode, prompt }: Mint
           </div>
         </div>
 
-        {/* Toggle form */}
+        {/* mint button */}
         {!showForm && !progress && (
           <button
             onClick={() => setShowForm(true)}
-            className="w-full py-3 bg-base-blue hover:bg-blue-600
-                       text-white font-display text-sm font-bold rounded-xl
-                       transition-all hover:scale-[1.01] active:scale-[0.99]
-                       shadow-lg shadow-base-blue/20 flex items-center justify-center gap-2"
+            className="w-full py-3 bg-base-blue hover:bg-blue-600 text-white font-display text-sm font-bold rounded-xl transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-base-blue/20 flex items-center justify-center gap-2"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2L2 7l10 5 10-5-10-5z" />
@@ -157,7 +211,7 @@ export function MintButton({ canvas, pixelSize, colorLimit, mode, prompt }: Mint
           </button>
         )}
 
-        {/* Metadata form */}
+        {/* metadata form */}
         {showForm && !progress && (
           <div className="space-y-3 animate-fade-up">
             <div>
@@ -168,9 +222,7 @@ export function MintButton({ canvas, pixelSize, colorLimit, mode, prompt }: Mint
                 onChange={(e) => setName(e.target.value)}
                 placeholder="My Pixel Creation"
                 maxLength={100}
-                className="w-full px-3 py-2 bg-[#0a0a15] border border-[#2a2a40] rounded-lg
-                           text-sm text-gray-200 placeholder-gray-600
-                           focus:outline-none focus:border-base-blue/50"
+                className="w-full px-3 py-2 bg-[#0a0a15] border border-[#2a2a40] rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-base-blue/50"
               />
             </div>
             <div>
@@ -178,132 +230,120 @@ export function MintButton({ canvas, pixelSize, colorLimit, mode, prompt }: Mint
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="A beautiful pixel art piece…"
+                placeholder="A beautiful pixel art piece..."
                 rows={2}
                 maxLength={500}
-                className="w-full px-3 py-2 bg-[#0a0a15] border border-[#2a2a40] rounded-lg
-                           text-sm text-gray-200 placeholder-gray-600 resize-none
-                           focus:outline-none focus:border-base-blue/50"
+                className="w-full px-3 py-2 bg-[#0a0a15] border border-[#2a2a40] rounded-lg text-sm text-gray-200 placeholder-gray-600 resize-none focus:outline-none focus:border-base-blue/50"
               />
             </div>
 
             <div className="flex gap-2">
               <button
                 onClick={() => setShowForm(false)}
-                className="flex-1 py-2.5 text-sm text-gray-500 hover:text-gray-300
-                           bg-[#0a0a15] rounded-xl border border-[#2a2a40]
-                           transition-colors"
+                className="flex-1 py-2.5 text-sm text-gray-500 hover:text-gray-300 bg-[#0a0a15] rounded-xl border border-[#2a2a40] transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleMint}
                 disabled={isMinting || isConfirming}
-                className="flex-[2] py-2.5 bg-base-blue hover:bg-blue-600
-                           text-white font-display text-sm font-bold rounded-xl
-                           transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-[2] py-2.5 bg-base-blue hover:bg-blue-600 text-white font-display text-sm font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {isMinting || isConfirming ? (
+                {(isMinting || isConfirming) && (
                   <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
                     <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                   </svg>
-                ) : null}
+                )}
                 Confirm Mint
               </button>
             </div>
 
             {!pinataJwt && (
               <p className="text-[10px] text-amber-400/80">
-                ⚠ PINATA_JWT not set. Configure in .env.local
+                {"⚠ PINATA_JWT not set. Configure in .env.local"}
               </p>
             )}
           </div>
         )}
 
-        {/* Progress Steps */}
+        {/* progress steps */}
         {progress && (
           <div className="space-y-3 animate-fade-up">
-            {/* Step indicators */}
             <div className="flex items-center gap-2">
-              {(["uploading_image", "uploading_metadata", "minting", "confirming", "done"] as const).map(
-                (step, i) => {
-                  const steps = ["uploading_image", "uploading_metadata", "minting", "confirming", "done"];
-                  const currentIdx = steps.indexOf(progress.step);
-                  const stepIdx = i;
-                  const isDone = stepIdx < currentIdx || progress.step === "done";
-                  const isCurrent = stepIdx === currentIdx;
-                  const isError = progress.step === "error";
-
-                  return (
-                    <div key={step} className="flex items-center gap-2 flex-1">
-                      <div
-                        className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold
-                          ${isError ? "bg-red-500/20 text-red-400" :
-                            isDone ? "bg-base-mint/20 text-base-mint" :
-                            isCurrent ? "bg-base-blue/20 text-base-blue animate-pulse" :
-                            "bg-[#1a1a2e] text-gray-600"
-                          }`}
-                      >
-                        {isDone ? "✓" : isError ? "✕" : i + 1}
-                      </div>
-                      {i < 4 && (
-                        <div className={`flex-1 h-px ${
-                          isDone ? "bg-base-mint/30" : "bg-[#2a2a40]"
-                        }`} />
-                      )}
+              {allSteps.map((step, i) => {
+                const isDone = i < currentIdx || progress.step === "done";
+                const isCurrent = i === currentIdx;
+                return (
+                  <div key={step} className="flex items-center gap-2 flex-1">
+                    <div
+                      className={[
+                        "w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold",
+                        isError
+                          ? "bg-red-500/20 text-red-400"
+                          : isDone
+                          ? "bg-base-mint/20 text-base-mint"
+                          : isCurrent
+                          ? "bg-base-blue/20 text-base-blue animate-pulse"
+                          : "bg-[#1a1a2e] text-gray-600",
+                      ].join(" ")}
+                    >
+                      {isDone ? "\u2713" : isError ? "\u2715" : i + 1}
                     </div>
-                  );
-                }
-              )}
+                    {i < 4 && (
+                      <div
+                        className={[
+                          "flex-1 h-px",
+                          isDone ? "bg-base-mint/30" : "bg-[#2a2a40]",
+                        ].join(" ")}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
-            {/* Status message */}
-            <div className={`p-3 rounded-lg text-sm ${
-              progress.step === "error"
-                ? "bg-red-500/10 border border-red-500/20 text-red-400"
-                : progress.step === "done"
-                ? "bg-base-mint/10 border border-base-mint/20 text-base-mint"
-                : "bg-base-blue/5 border border-base-blue/10 text-gray-300"
-            }`}>
-              {progress.step === "done" ? "🎉 " : ""}
+            <div
+              className={[
+                "p-3 rounded-lg text-sm",
+                progress.step === "error"
+                  ? "bg-red-500/10 border border-red-500/20 text-red-400"
+                  : progress.step === "done"
+                  ? "bg-base-mint/10 border border-base-mint/20 text-base-mint"
+                  : "bg-base-blue/5 border border-base-blue/10 text-gray-300",
+              ].join(" ")}
+            >
+              {progress.step === "done" ? "\uD83C\uDF89 " : ""}
               {progress.message}
             </div>
 
-            {/* Transaction links */}
             {progress.txHash && (
               <div className="flex gap-2">
                 <a
                   href={getBasescanURL(progress.txHash)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 text-center text-xs py-2 bg-[#0a0a15] border border-[#2a2a40]
-                             rounded-lg text-base-accent hover:text-white transition-colors"
+                  className="flex-1 text-center text-xs py-2 bg-[#0a0a15] border border-[#2a2a40] rounded-lg text-base-accent hover:text-white transition-colors"
                 >
-                  View on Basescan ↗
+                  {"View on Basescan \u2197"}
                 </a>
                 <a
-                  href={`https://zora.co`}
+                  href="https://zora.co"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 text-center text-xs py-2 bg-[#0a0a15] border border-[#2a2a40]
-                             rounded-lg text-base-accent hover:text-white transition-colors"
+                  className="flex-1 text-center text-xs py-2 bg-[#0a0a15] border border-[#2a2a40] rounded-lg text-base-accent hover:text-white transition-colors"
                 >
-                  View on Zora ↗
+                  {"View on Zora \u2197"}
                 </a>
               </div>
             )}
 
-            {/* Reset */}
             {(progress.step === "done" || progress.step === "error") && (
               <button
-                onClick={() => {
-                  setProgress(null);
-                  setShowForm(false);
-                }}
+                onClick={handleReset}
                 className="w-full text-xs text-gray-500 hover:text-gray-300 py-2 transition-colors"
               >
-                {progress.step === "done" ? "Mint another" : "Try again"}
+                {progress.step === "done" ? "Create another" : "Try again"}
               </button>
             )}
           </div>

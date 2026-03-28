@@ -5,10 +5,11 @@ import { fileToDataURL } from "@/lib/pixelate";
 
 interface UploadSectionProps {
   onImageLoaded: (dataUrl: string) => void;
+  onImageRemoved?: () => void;
   disabled?: boolean;
 }
 
-export function UploadSection({ onImageLoaded, disabled }: UploadSectionProps) {
+export function UploadSection({ onImageLoaded, onImageRemoved, disabled }: UploadSectionProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -117,6 +118,7 @@ export function UploadSection({ onImageLoaded, disabled }: UploadSectionProps) {
             e.stopPropagation();
             setPreview(null);
             if (inputRef.current) inputRef.current.value = "";
+            onImageRemoved?.();
           }}
           className="text-xs text-gray-500 hover:text-red-400 transition-colors"
         >
