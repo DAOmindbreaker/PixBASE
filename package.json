@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@coinbase/onchainkit": "^0.36.0",
+    "@coinbase/x402": "^2.1.0",
+    "@tanstack/react-query": "^5.62.0",
     "@zoralabs/protocol-sdk": "^0.9.0",
+    "canvas": "^3.2.2",
     "next": "^15.1.0",
     "nft.storage": "^7.2.0",
     "react": "^19.0.0",
@@ -19,7 +22,7 @@
     "siwe": "^2.3.2",
     "viem": "^2.21.0",
     "wagmi": "^2.14.0",
-    "@tanstack/react-query": "^5.62.0"
+    "x402-next": "^1.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
