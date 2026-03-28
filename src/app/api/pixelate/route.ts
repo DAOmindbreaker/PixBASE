@@ -52,7 +52,7 @@ export const POST = withX402(
   agentWalletAddress,
   {
     price: "$0.01",
-    network: "base-sepolia",
+    network: "base",
     config: {
       description: "Pixelon pixel art generator",
       mimeType: "image/png",
