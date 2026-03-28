@@ -11,6 +11,9 @@ export const metadata: Metadata = {
     description: "Turn anything into pixel art NFTs on Base",
     type: "website",
   },
+  other: {
+    "base:app_id": "69c75debe85b6f7acb5113a7",
+  },
 };
 
 export const viewport: Viewport = {
