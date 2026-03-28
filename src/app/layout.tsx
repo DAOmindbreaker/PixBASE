@@ -3,11 +3,11 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "PixBASE — Pixel NFT Generator on Base",
+  title: "Pixelon — Pixel NFT Generator on Base",
   description:
     "Transform any image into pixel art and mint it as an NFT on Base. Upload photos or generate with AI, customize the pixel style, and mint via Zora.",
   openGraph: {
-    title: "PixBASE — Pixel NFT Generator",
+    title: "Pixelon — Pixel NFT Generator",
     description: "Turn anything into pixel art NFTs on Base",
     type: "website",
   },

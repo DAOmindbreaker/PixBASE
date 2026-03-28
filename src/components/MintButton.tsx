@@ -48,8 +48,8 @@ export function MintButton({ canvas, pixelSize, colorLimit, mode, prompt }: Mint
       // Step 2: Build & upload metadata
       setProgress({ step: "uploading_metadata", message: "Uploading NFT metadata…" });
       const metadata = buildMetadata({
-        name: name || "PixBASE Creation",
-        description: description || `Pixel art created with PixBASE on Base`,
+        name: name || "Pixelon Creation",
+        description: description || `Pixel art created with Pixelon on Base`,
         imageCID,
         pixelSize,
         colorLimit,
@@ -67,7 +67,7 @@ export function MintButton({ canvas, pixelSize, colorLimit, mode, prompt }: Mint
         functionName: "createContract",
         args: [
           `ipfs://${metadataCID}`,
-          name || "PixBASE Creation",
+          name || "Pixelon Creation",
           {
             royaltyMintSchedule: 0,
             royaltyBPS: 500, // 5% royalty

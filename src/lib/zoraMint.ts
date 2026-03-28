@@ -1,5 +1,5 @@
 /**
- * PixBASE — Zora NFT Minting Logic
+ * Pixelon — Zora NFT Minting Logic
  *
  * Uses Zora Protocol SDK to mint ERC-721 tokens on Base.
  * Handles IPFS upload + on-chain mint in one flow.
@@ -98,7 +98,7 @@ export async function uploadMetadataToIPFS(
  *
  * const creatorClient = createCreatorClient({ chainId: base.id, publicClient });
  * const { parameters } = await creatorClient.create1155({
- *   contract: { name: "PixBASE Collection", uri: contractMetadataURI },
+ *   contract: { name: "Pixelon Collection", uri: contractMetadataURI },
  *   token: {
  *     tokenMetadataURI: `ipfs://${metadataCID}`,
  *     createReferral: REFERRAL_ADDRESS,
@@ -151,7 +151,7 @@ export function buildMetadata(params: {
     { trait_type: "Pixel Size", value: params.pixelSize },
     { trait_type: "Color Palette", value: params.colorLimit || "Full" },
     { trait_type: "Source", value: params.mode === "ai" ? "AI Generated" : "Uploaded" },
-    { trait_type: "Generator", value: "PixBASE" },
+    { trait_type: "Generator", value: "Pixelon" },
     { trait_type: "Chain", value: "Base" },
   ];
 
@@ -160,13 +160,13 @@ export function buildMetadata(params: {
   }
 
   return {
-    name: params.name || "PixBASE Creation",
+    name: params.name || "Pixelon Creation",
     description:
       params.description ||
-      `Pixel art created with PixBASE on Base. Pixel size: ${params.pixelSize}px.`,
+      `Pixel art created with Pixelon on Base. Pixel size: ${params.pixelSize}px.`,
     image: `ipfs://${params.imageCID}`,
     attributes: attributes as NFTMetadata["attributes"],
-    external_url: "https://pixbase.base.dev",
+    external_url: "https://pixelon.base.dev",
   };
 }
 

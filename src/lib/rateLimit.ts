@@ -3,7 +3,7 @@
  * Limits AI generation to N times per day.
  */
 
-const STORAGE_KEY = "pixbase_daily_usage";
+const STORAGE_KEY = "pixelon_daily_usage";
 const MAX_FREE_GENERATIONS = 5;
 
 interface UsageRecord {

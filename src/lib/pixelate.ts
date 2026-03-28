@@ -1,5 +1,5 @@
 /**
- * PixBASE — Pixel Art Engine
+ * Pixelon — Pixel Art Engine
  *
  * Efficient HTML5 Canvas-based pixelation with color palette reduction.
  * Uses nearest-neighbor downscale + upscale for authentic pixel art.
@@ -247,7 +247,7 @@ export function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
 /**
  * Download canvas as PNG file.
  */
-export function downloadCanvas(canvas: HTMLCanvasElement, filename: string = "pixbase.png"): void {
+export function downloadCanvas(canvas: HTMLCanvasElement, filename: string = "pixelon.png"): void {
   const link = document.createElement("a");
   link.download = filename;
   link.href = canvas.toDataURL("image/png");

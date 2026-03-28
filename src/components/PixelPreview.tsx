@@ -40,7 +40,7 @@ export function PixelPreview({ imageSource, options, onCanvasReady }: PixelPrevi
   const handleDownload = () => {
     if (canvasRef.current) {
       const timestamp = Date.now().toString(36);
-      downloadCanvas(canvasRef.current, `pixbase-${timestamp}.png`);
+      downloadCanvas(canvasRef.current, `pixelon-${timestamp}.png`);
     }
   };
 
@@ -147,11 +147,11 @@ export function PixelPreview({ imageSource, options, onCanvasReady }: PixelPrevi
               const blob = await new Promise<Blob>((res) =>
                 canvasRef.current!.toBlob((b) => res(b!), "image/png")
               );
-              const file = new File([blob], "pixbase.png", { type: "image/png" });
+              const file = new File([blob], "pixelon.png", { type: "image/png" });
               if (navigator.share && navigator.canShare({ files: [file] })) {
                 await navigator.share({
-                  title: "PixBASE Creation",
-                  text: "Check out my pixel art from PixBASE!",
+                  title: "Pixelon Creation",
+                  text: "Check out my pixel art from Pixelon!",
                   files: [file],
                 });
               } else {

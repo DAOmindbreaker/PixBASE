@@ -1,4 +1,4 @@
-# PixBASE — Pixel NFT Generator (Base Mini App)
+# Pixelon — Pixel NFT Generator (Base Mini App)
 
 A Base Mini App that transforms any image or AI-generated artwork into stunning pixel art, then lets you mint it as an NFT on Base via Zora.
 

@@ -8,7 +8,7 @@ export const config = createConfig({
   chains: [base, baseSepolia],
   connectors: [
     coinbaseWallet({
-      appName: "PixBASE",
+      appName: "Pixelon",
       preference: "smartWalletOnly",
     }),
     injected(),

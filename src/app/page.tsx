@@ -69,7 +69,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="font-display text-base font-bold text-white tracking-tight">
-                PixBASE
+                Pixelon
               </h1>
               <p className="text-[9px] text-gray-500 font-display uppercase tracking-widest">
                 Pixel NFT Generator
