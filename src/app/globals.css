@@ -43,6 +43,20 @@ body::before {
   z-index: 0;
 }
 
+/* Subtle radial glow behind hero */
+body::after {
+  content: "";
+  position: fixed;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 600px;
+  background: radial-gradient(ellipse, rgba(0, 82, 255, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -79,10 +93,27 @@ input[type="range"]::-webkit-slider-thumb {
   background: var(--color-base-blue);
   margin-top: -7px;
   border: 2px solid var(--color-base-accent);
-  transition: transform 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.2);
+  box-shadow: 0 0 12px rgba(0, 82, 255, 0.4);
+}
+
+/* Firefox slider */
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+  border: none;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--color-base-blue);
+  border: 2px solid var(--color-base-accent);
+  cursor: pointer;
 }
 
 /* Drop zone */
@@ -96,4 +127,16 @@ canvas {
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--color-base-blue);
+  outline-offset: 2px;
+}
+
+/* Selection color */
+::selection {
+  background: rgba(0, 82, 255, 0.3);
+  color: white;
 }
