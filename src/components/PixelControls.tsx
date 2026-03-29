@@ -103,13 +103,13 @@ export function PixelControls({ options, onChange, disabled }: PixelControlsProp
           </h3>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {PRESETS.map((preset) => (
             <button
               key={preset.id}
               onClick={() => applyPreset(preset)}
               className={[
-                "p-2.5 rounded-xl border text-left transition-all duration-200",
+                "p-2.5 rounded-xl border text-left transition-all duration-200 flex-shrink-0 w-[120px]",
                 activePreset === preset.id
                   ? preset.activeColor
                   : ["bg-[#0d0d1a]/50", preset.color].join(" "),
