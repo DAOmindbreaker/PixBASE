@@ -245,7 +245,7 @@ export default function Home() {
       {/* ===== AI AGENT BADGE ===== */}
       <section className="max-w-5xl mx-auto px-4 pb-6 relative z-10">
         <a
-          href="https://basepixelon.vercel.app/.well-known/SKILL.md"
+          href="/agent"
           target="_blank"
           rel="noopener noreferrer"
           className="block p-4 bg-gradient-to-r from-[#111122] to-[#0d0d1a] border border-[#2a2a40] rounded-2xl hover:border-base-blue/30 transition-all group"
