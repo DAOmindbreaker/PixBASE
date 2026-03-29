@@ -10,7 +10,12 @@ import { PromptSection } from "@/components/PromptSection";
 import { PixelPreview } from "@/components/PixelPreview";
 import { PixelControls } from "@/components/PixelControls";
 import { MintButton } from "@/components/MintButton";
+import { RecentMints } from "@/components/RecentMints";
+import { BeforeAfterSlider } from "@/components/BeforeAfterSlider";
+import { ShareCard } from "@/components/ShareCard";
+import { PixelPlayground } from "@/components/PixelPlayground";
 import type { PixelateOptions } from "@/lib/pixelate";
+import type { Hash } from "viem";
 
 type TabMode = "upload" | "ai";
 
@@ -29,6 +34,11 @@ export default function Home() {
   });
   const [pixelCanvas, setPixelCanvas] = useState<HTMLCanvasElement | null>(null);
   const [resetKey, setResetKey] = useState(0);
+
+  // Share card state
+  const [showShareCard, setShowShareCard] = useState(false);
+  const [mintedTxHash, setMintedTxHash] = useState<Hash | undefined>();
+  const [mintedName, setMintedName] = useState("");
 
   useEffect(() => {
     if (isConnected && chain && chain.id !== 8453) {
@@ -54,15 +64,26 @@ export default function Home() {
   }, []);
 
   const handleMintComplete = useCallback(() => {
+    // Show share card instead of immediately resetting
+    if (pixelCanvas) {
+      setShowShareCard(true);
+    } else {
+      setImageSource(null);
+      setPixelCanvas(null);
+      setAiPrompt("");
+      setPixelOptions({ pixelSize: 16, colorLimit: 0, brightness: 0, contrast: 1.0 });
+      setResetKey((k) => k + 1);
+    }
+  }, [pixelCanvas]);
+
+  const handleShareCardClose = useCallback(() => {
+    setShowShareCard(false);
     setImageSource(null);
     setPixelCanvas(null);
     setAiPrompt("");
-    setPixelOptions({
-      pixelSize: 16,
-      colorLimit: 0,
-      brightness: 0,
-      contrast: 1.0,
-    });
+    setMintedTxHash(undefined);
+    setMintedName("");
+    setPixelOptions({ pixelSize: 16, colorLimit: 0, brightness: 0, contrast: 1.0 });
     setResetKey((k) => k + 1);
   }, []);
 
@@ -73,6 +94,19 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen z-10">
+      {/* Share Card Modal */}
+      {showShareCard && pixelCanvas && (
+        <ShareCard
+          canvas={pixelCanvas}
+          name={mintedName || "Pixelon Creation"}
+          pixelSize={pixelOptions.pixelSize}
+          colorLimit={pixelOptions.colorLimit}
+          mode={activeTab}
+          txHash={mintedTxHash}
+          onClose={handleShareCardClose}
+        />
+      )}
+
       {/* ===== HEADER ===== */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0a0a0a]/80 border-b border-[#1a1a2e]">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -102,6 +136,18 @@ export default function Home() {
 
           <div className="flex items-center gap-3">
             <Link
+              href="/gallery"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-display text-gray-500 hover:text-base-accent border border-[#1a1a2e] hover:border-base-accent/30 rounded-lg transition-all"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+              Gallery
+            </Link>
+            <Link
               href="/agent"
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-display text-gray-500 hover:text-base-accent border border-[#1a1a2e] hover:border-base-accent/30 rounded-lg transition-all"
             >
@@ -116,7 +162,6 @@ export default function Home() {
       {/* ===== HERO ===== */}
       <section className="max-w-5xl mx-auto px-4 pt-10 pb-6">
         <div className="text-center space-y-4">
-          {/* Badge */}
           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-base-blue/5 border border-base-blue/10 rounded-full animate-fade-up">
             <div className="w-1.5 h-1.5 rounded-full bg-base-blue animate-pulse" />
             <span className="text-[10px] font-display text-gray-400 uppercase tracking-wider">
@@ -138,7 +183,6 @@ export default function Home() {
             Upload an image or generate one with AI. Customize the pixel style in real time, then mint as an NFT on Base with one click.
           </p>
 
-          {/* Stats row */}
           <div className="flex items-center justify-center gap-6 pt-2 animate-fade-up">
             <div className="text-center">
               <p className="font-display text-sm font-bold text-white">1080px</p>
@@ -226,6 +270,9 @@ export default function Home() {
                 disabled={!imageSource}
               />
             </div>
+
+            {/* Pixel Playground (unique feature) */}
+            <PixelPlayground />
           </div>
 
           {/* ===== RIGHT COLUMN ===== */}
@@ -240,6 +287,17 @@ export default function Home() {
               />
             </div>
 
+            {/* Before/After Slider */}
+            {imageSource && pixelCanvas && (
+              <div className="p-4 bg-[#111122]/60 border border-[#1a1a2e] rounded-2xl backdrop-blur-sm animate-fade-up">
+                <BeforeAfterSlider
+                  originalSrc={imageSource}
+                  pixelCanvas={pixelCanvas}
+                  pixelSize={pixelOptions.pixelSize}
+                />
+              </div>
+            )}
+
             {/* Mint Section */}
             <MintButton
               canvas={pixelCanvas}
@@ -249,6 +307,11 @@ export default function Home() {
               prompt={activeTab === "ai" ? aiPrompt : undefined}
               onMintComplete={handleMintComplete}
             />
+
+            {/* Recent Mints Feed */}
+            <div className="p-4 bg-[#111122]/60 border border-[#1a1a2e] rounded-2xl backdrop-blur-sm">
+              <RecentMints />
+            </div>
 
             {/* Feature Cards */}
             {!imageSource && (
@@ -300,13 +363,13 @@ export default function Home() {
         </div>
       </main>
 
-      {/* ===== AI AGENT BADGE ===== */}
+      {/* ===== BOTTOM CARDS ===== */}
       <section className="max-w-5xl mx-auto px-4 pb-6 relative z-10">
-        <Link
-          href="/agent"
-          className="block p-4 bg-gradient-to-r from-[#111122] to-[#0d0d1a] border border-[#2a2a40] rounded-2xl hover:border-base-blue/30 transition-all duration-300 group hover:-translate-y-0.5"
-        >
-          <div className="flex items-center justify-between">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Link
+            href="/agent"
+            className="block p-4 bg-gradient-to-r from-[#111122] to-[#0d0d1a] border border-[#2a2a40] rounded-2xl hover:border-base-blue/30 transition-all duration-300 group hover:-translate-y-0.5"
+          >
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-base-blue/10 flex items-center justify-center relative">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0052FF" strokeWidth="1.5">
@@ -320,22 +383,35 @@ export default function Home() {
                 <div className="flex items-center gap-2">
                   <span className="font-display text-xs font-bold text-gray-300">AI Agent</span>
                   <span className="text-[8px] bg-base-mint/15 text-base-mint px-1.5 py-0.5 rounded font-display font-bold uppercase tracking-wider">x402</span>
-                  <span className="text-[8px] bg-base-blue/15 text-base-blue px-1.5 py-0.5 rounded font-display font-bold uppercase tracking-wider">ERC-8004</span>
                 </div>
-                <p className="text-[10px] text-gray-500">
-                  {"pixelon.base.eth \u00B7 Pixel art as a service for AI agents on Base"}
-                </p>
+                <p className="text-[10px] text-gray-500">Pixel art as a service for AI agents</p>
               </div>
             </div>
-            <div className="text-[10px] text-gray-600 group-hover:text-base-accent transition-colors font-display hidden sm:flex items-center gap-1">
-              {"Learn more "}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="group-hover:translate-x-0.5 transition-transform">
-                <path d="M5 12h14" />
-                <path d="M12 5l7 7-7 7" />
-              </svg>
+          </Link>
+
+          <Link
+            href="/gallery"
+            className="block p-4 bg-gradient-to-r from-[#0d0d1a] to-[#111122] border border-[#2a2a40] rounded-2xl hover:border-base-accent/30 transition-all duration-300 group hover:-translate-y-0.5"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-base-accent/10 flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="1.5">
+                  <rect x="3" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-display text-xs font-bold text-gray-300">Gallery</span>
+                  <span className="text-[8px] bg-base-accent/15 text-base-accent px-1.5 py-0.5 rounded font-display font-bold uppercase tracking-wider">Public</span>
+                </div>
+                <p className="text-[10px] text-gray-500">Explore community pixel art creations</p>
+              </div>
             </div>
-          </div>
-        </Link>
+          </Link>
+        </div>
       </section>
 
       {/* ===== FOOTER ===== */}
@@ -359,44 +435,11 @@ export default function Home() {
               </p>
             </div>
             <div className="flex items-center gap-5">
-              <Link
-                href="/agent"
-                className="text-[10px] text-gray-600 hover:text-base-accent transition-colors font-display"
-              >
-                AI Agent
-              </Link>
-              <a
-                href="https://basepixelon.vercel.app/.well-known/SKILL.md"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[10px] text-gray-600 hover:text-base-accent transition-colors font-display"
-              >
-                SKILL.md
-              </a>
-              <a
-                href="https://base.dev"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[10px] text-gray-600 hover:text-base-blue transition-colors font-display"
-              >
-                {"base.dev \u2197"}
-              </a>
-              <a
-                href="https://base.org"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[10px] text-gray-600 hover:text-base-blue transition-colors font-display"
-              >
-                {"Base \u2197"}
-              </a>
-              <a
-                href="https://zora.co"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[10px] text-gray-600 hover:text-base-blue transition-colors font-display"
-              >
-                {"Zora \u2197"}
-              </a>
+              <Link href="/gallery" className="text-[10px] text-gray-600 hover:text-base-accent transition-colors font-display">Gallery</Link>
+              <Link href="/agent" className="text-[10px] text-gray-600 hover:text-base-accent transition-colors font-display">AI Agent</Link>
+              <a href="https://basepixelon.vercel.app/.well-known/SKILL.md" target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-600 hover:text-base-accent transition-colors font-display">SKILL.md</a>
+              <a href="https://base.dev" target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-600 hover:text-base-blue transition-colors font-display">{"base.dev \u2197"}</a>
+              <a href="https://zora.co" target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-600 hover:text-base-blue transition-colors font-display">{"Zora \u2197"}</a>
             </div>
           </div>
         </div>
