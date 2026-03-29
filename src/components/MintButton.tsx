@@ -1,5 +1,6 @@
 "use client";
 
+import { Attribution } from "ox/erc8021";
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import {
@@ -21,6 +22,10 @@ interface MintButtonProps {
   prompt?: string;
   onMintComplete?: () => void;
 }
+
+const DATA_SUFFIX = Attribution.toDataSuffix({
+  codes: ["bc_z8mrhec8"],
+});
 
 export function MintButton({
   canvas,
@@ -113,6 +118,7 @@ export function MintButton({
         address: ZORA_1155_CREATOR_ADDRESS,
         abi: ZORA_CREATOR_ABI,
         functionName: "createContract",
+        dataSuffix: DATA_SUFFIX,
         args: [
           `ipfs://${metadataCID}`,
           name || "Pixelon Creation",
