@@ -1,8 +1,9 @@
 "use client";
 
-import { Attribution } from "ox/erc8021";
 import { useState, useEffect, useCallback } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
+import { encodeFunctionData } from "viem";
+import { Attribution } from "ox/erc8021";
 import {
   uploadToIPFS,
   uploadMetadataToIPFS,
@@ -14,6 +15,10 @@ import {
 } from "@/lib/zoraMint";
 import { canvasToBlob } from "@/lib/pixelate";
 
+const DATA_SUFFIX = Attribution.toDataSuffix({
+  codes: ["bc_z8mrhec8"],
+});
+
 interface MintButtonProps {
   canvas: HTMLCanvasElement | null;
   pixelSize: number;
@@ -22,10 +27,6 @@ interface MintButtonProps {
   prompt?: string;
   onMintComplete?: () => void;
 }
-
-const DATA_SUFFIX = Attribution.toDataSuffix({
-  codes: ["bc_z8mrhec8"],
-});
 
 export function MintButton({
   canvas,
@@ -42,13 +43,13 @@ export function MintButton({
   const [description, setDescription] = useState("");
 
   const {
-    writeContract,
+    sendTransaction,
     data: txHash,
     isPending: isMinting,
     isError: isTxError,
     error: txError,
     reset: resetTx,
-  } = useWriteContract();
+  } = useSendTransaction();
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
     useWaitForTransactionReceipt({ hash: txHash });
@@ -114,11 +115,9 @@ export function MintButton({
 
       setProgress({ step: "minting", message: "Confirm in your wallet\u2026" });
 
-      writeContract({
-        address: ZORA_1155_CREATOR_ADDRESS,
+      const calldata = encodeFunctionData({
         abi: ZORA_CREATOR_ABI,
         functionName: "createContract",
-        dataSuffix: DATA_SUFFIX,
         args: [
           `ipfs://${metadataCID}`,
           name || "Pixelon Creation",
@@ -130,6 +129,11 @@ export function MintButton({
           address,
           [],
         ],
+      });
+
+      sendTransaction({
+        to: ZORA_1155_CREATOR_ADDRESS,
+        data: `${calldata}${DATA_SUFFIX.slice(2)}` as `0x${string}`,
       });
     } catch (err) {
       console.error("Mint error:", err);
