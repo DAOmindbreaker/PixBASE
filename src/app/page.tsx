@@ -28,6 +28,9 @@ export default function Home() {
   });
   const [pixelCanvas, setPixelCanvas] = useState<HTMLCanvasElement | null>(null);
 
+  // Reset key: increments after mint to force remount all child components
+  const [resetKey, setResetKey] = useState(0);
+
   useEffect(() => {
     if (isConnected && chain && chain.id !== 8453) {
       try {
@@ -54,6 +57,15 @@ export default function Home() {
   const handleMintComplete = useCallback(() => {
     setImageSource(null);
     setPixelCanvas(null);
+    setAiPrompt("");
+    setPixelOptions({
+      pixelSize: 16,
+      colorLimit: 0,
+      brightness: 0,
+      contrast: 1.0,
+    });
+    // Increment key to force remount UploadSection, PromptSection, PixelPreview
+    setResetKey((k) => k + 1);
   }, []);
 
   const handleImageRemoved = useCallback(() => {
@@ -154,11 +166,15 @@ export default function Home() {
             <div className="p-4 bg-[#111122]/60 border border-[#1a1a2e] rounded-2xl">
               {activeTab === "upload" ? (
                 <UploadSection
+                  key={`upload-${resetKey}`}
                   onImageLoaded={handleImageLoaded}
                   onImageRemoved={handleImageRemoved}
                 />
               ) : (
-                <PromptSection onImageGenerated={handleAiGenerated} />
+                <PromptSection
+                  key={`prompt-${resetKey}`}
+                  onImageGenerated={handleAiGenerated}
+                />
               )}
             </div>
 
@@ -175,6 +191,7 @@ export default function Home() {
           <div className="lg:col-span-8 space-y-5">
             <div className="p-4 bg-[#111122]/60 border border-[#1a1a2e] rounded-2xl">
               <PixelPreview
+                key={`preview-${resetKey}`}
                 imageSource={imageSource}
                 options={pixelOptions}
                 onCanvasReady={handleCanvasReady}
