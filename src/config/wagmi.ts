@@ -1,11 +1,11 @@
-import { http, createConfig } from "wagmi";
+import { http, createConfig, createStorage, cookieStorage } from "wagmi";
 import { base } from "wagmi/chains";
 import { coinbaseWallet, injected, walletConnect } from "wagmi/connectors";
+import { baseAccount } from "wagmi/connectors";
 import { Attribution } from "ox/erc8021";
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "";
 
-// Ganti dengan Builder Code kamu dari base.dev > Settings > Builder Code
 const DATA_SUFFIX = Attribution.toDataSuffix({
   codes: ["bc_z8mrhec8"],
 });
@@ -13,6 +13,9 @@ const DATA_SUFFIX = Attribution.toDataSuffix({
 export const config = createConfig({
   chains: [base],
   connectors: [
+    baseAccount({
+      appName: "Pixelon",
+    }),
     coinbaseWallet({
       appName: "Pixelon",
       preference: "smartWalletOnly",
@@ -23,6 +26,8 @@ export const config = createConfig({
     injected(),
     ...(projectId ? [walletConnect({ projectId })] : []),
   ],
+  storage: createStorage({ storage: cookieStorage }),
+  ssr: true,
   transports: {
     [base.id]: http("https://mainnet.base.org"),
   },
