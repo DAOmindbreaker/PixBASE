@@ -61,7 +61,7 @@ export function PixelPlayground() {
   }, [pixels, gridSize, cellSize, canvasSize]);
 
   const getGridPos = useCallback(
-    (e: React.MouseEvent | React.TouchEvent) => {
+    (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
       if (!canvasRef.current) return null;
       const rect = canvasRef.current.getBoundingClientRect();
       const scaleX = canvasSize / rect.width;
@@ -106,7 +106,7 @@ export function PixelPlayground() {
   );
 
   const paint = useCallback(
-    (e: React.MouseEvent | React.TouchEvent) => {
+    (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
       const pos = getGridPos(e);
       if (!pos) return;
       const key = `${pos.x},${pos.y}`;
@@ -128,6 +128,39 @@ export function PixelPlayground() {
     },
     [getGridPos, tool, selectedColor, floodFill]
   );
+
+  // Native touch event listeners (non-passive, so preventDefault works)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !isOpen) return;
+
+    let touching = false;
+
+    const onTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      touching = true;
+      setIsDrawing(true);
+      paint(e);
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (touching) paint(e);
+    };
+    const onTouchEnd = () => {
+      touching = false;
+      setIsDrawing(false);
+    };
+
+    canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    canvas.addEventListener("touchend", onTouchEnd);
+
+    return () => {
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
+      canvas.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [isOpen, paint]);
 
   const handleDownload = useCallback(() => {
     if (!canvasRef.current) return;
@@ -310,15 +343,6 @@ export function PixelPlayground() {
           onMouseMove={(e) => isDrawing && paint(e)}
           onMouseUp={() => setIsDrawing(false)}
           onMouseLeave={() => setIsDrawing(false)}
-          onTouchStart={(e) => {
-            e.preventDefault();
-            setIsDrawing(true);
-            paint(e);
-          }}
-          onTouchMove={(e) => {
-            e.preventDefault();
-            if (isDrawing) paint(e);
-          }}
           onTouchEnd={() => setIsDrawing(false)}
         />
       </div>

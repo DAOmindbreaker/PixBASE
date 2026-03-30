@@ -25,7 +25,7 @@ interface MintButtonProps {
   colorLimit: number;
   mode: "upload" | "ai";
   prompt?: string;
-  onMintComplete?: () => void;
+  onMintComplete?: (txHash?: `0x${string}`, name?: string) => void;
 }
 
 export function MintButton({
@@ -146,15 +146,17 @@ export function MintButton({
 
   const handleReset = useCallback(() => {
     const wasDone = progress?.step === "done";
+    const savedTxHash = progress?.txHash;
+    const savedName = name;
     setProgress(null);
     setShowForm(false);
     setName("");
     setDescription("");
     resetTx();
     if (wasDone && onMintComplete) {
-      onMintComplete();
+      onMintComplete(savedTxHash, savedName);
     }
-  }, [resetTx, onMintComplete, progress?.step]);
+  }, [resetTx, onMintComplete, progress?.step, progress?.txHash, name]);
 
   // --- early returns ---
 

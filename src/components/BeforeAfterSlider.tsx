@@ -18,12 +18,26 @@ export function BeforeAfterSlider({
   const [isExpanded, setIsExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [pixelDataUrl, setPixelDataUrl] = useState<string>("");
+  const [containerWidth, setContainerWidth] = useState<number>(0);
 
   useEffect(() => {
     if (pixelCanvas) {
       setPixelDataUrl(pixelCanvas.toDataURL("image/png"));
     }
   }, [pixelCanvas]);
+
+  // Track container width for proper image sizing
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(containerRef.current);
+    setContainerWidth(containerRef.current.offsetWidth);
+    return () => observer.disconnect();
+  }, [isExpanded]);
 
   const updatePosition = useCallback(
     (clientX: number) => {
@@ -137,11 +151,9 @@ export function BeforeAfterSlider({
           <img
             src={originalSrc}
             alt="Original"
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 h-full object-cover"
             style={{
-              width: containerRef.current
-                ? `${containerRef.current.offsetWidth}px`
-                : "100%",
+              width: containerWidth > 0 ? `${containerWidth}px` : "100%",
               maxWidth: "none",
             }}
             draggable={false}

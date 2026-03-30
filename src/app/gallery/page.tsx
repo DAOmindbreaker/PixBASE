@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { WalletButton } from "@/components/WalletButton";
 
+const ZORA_1155_CREATOR = "0x777777C338d93e2C7adf08D102d45CA7CC4Ed021";
+
 interface GalleryItem {
   id: string;
   name: string;
@@ -443,5 +445,3 @@ export default function GalleryPage() {
     </div>
   );
 }
-
-const ZORA_1155_CREATOR = "0x777777C338d93e2C7adf08D102d45CA7CC4Ed021";

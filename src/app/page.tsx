@@ -48,7 +48,7 @@ export default function Home() {
         console.error("Auto switch failed:", e);
       }
     }
-  }, [isConnected, chain]);
+  }, [isConnected, chain, switchChain]);
 
   const handleImageLoaded = useCallback((dataUrl: string) => {
     setImageSource(dataUrl);
@@ -63,9 +63,10 @@ export default function Home() {
     setPixelCanvas(canvas);
   }, []);
 
-  const handleMintComplete = useCallback(() => {
-    // Show share card instead of immediately resetting
+  const handleMintComplete = useCallback((txHash?: `0x${string}`, name?: string) => {
     if (pixelCanvas) {
+      setMintedTxHash(txHash);
+      setMintedName(name || "Pixelon Creation");
       setShowShareCard(true);
     } else {
       setImageSource(null);

@@ -11,7 +11,6 @@ interface MintEvent {
   contractAddress: string;
 }
 
-const BASESCAN_API = "https://api.basescan.org/api";
 const ZORA_1155_CREATOR = "0x777777C338d93e2C7adf08D102d45CA7CC4Ed021";
 
 function shortenAddress(addr: string): string {
@@ -36,33 +35,11 @@ export function RecentMints() {
     try {
       setLoading(true);
       // Fetch recent transactions to Zora 1155 Creator contract on Base
-      const apiKey = process.env.NEXT_PUBLIC_BASESCAN_API_KEY || "";
-      const params = new URLSearchParams({
-        module: "account",
-        action: "txlist",
-        address: ZORA_1155_CREATOR,
-        page: "1",
-        offset: "8",
-        sort: "desc",
-        ...(apiKey && { apikey: apiKey }),
-      });
-
-      const res = await fetch(`${BASESCAN_API}?${params}`);
+      const res = await fetch("/api/recent-mints");
       const data = await res.json();
 
-      if (data.status === "1" && Array.isArray(data.result)) {
-        const parsed: MintEvent[] = data.result
-          .filter((tx: any) => tx.isError === "0")
-          .slice(0, 6)
-          .map((tx: any) => ({
-            id: tx.hash,
-            creator: tx.from,
-            txHash: tx.hash,
-            timestamp: parseInt(tx.timeStamp),
-            blockNumber: parseInt(tx.blockNumber),
-            contractAddress: tx.to,
-          }));
-        setMints(parsed);
+      if (Array.isArray(data.mints) && data.mints.length > 0) {
+        setMints(data.mints);
         setError(null);
       } else {
         // Fallback: show placeholder data

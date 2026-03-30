@@ -110,7 +110,6 @@ export function ShareCard({
 
     ctx.font = "10px 'Space Mono', monospace";
     ctx.fillStyle = "#666";
-    ctx.letterSpacing = "3px";
     ctx.fillText("PIXEL ART NFT ON BASE", textX + 40, 140);
 
     // Name

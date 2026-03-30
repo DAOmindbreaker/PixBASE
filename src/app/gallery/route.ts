@@ -13,6 +13,8 @@ import { NextResponse } from "next/server";
  * No Zora API needed. Pure Base chain data.
  */
 
+export const revalidate = 120; // ISR: revalidate every 2 minutes
+
 const BASESCAN_API = "https://api.basescan.org/api";
 const ZORA_1155_CREATOR = "0x777777C338d93e2C7adf08D102d45CA7CC4Ed021";
 
@@ -146,9 +148,7 @@ export async function GET() {
       ...(apiKey && { apikey: apiKey }),
     });
 
-    const res = await fetch(`${BASESCAN_API}?${params}`, {
-      next: { revalidate: 120 }, // Cache 2 minutes
-    });
+    const res = await fetch(`${BASESCAN_API}?${params}`);
     const data = await res.json();
 
     if (data.status !== "1" || !Array.isArray(data.result)) {
