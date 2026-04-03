@@ -15,7 +15,7 @@ import { NextResponse } from "next/server";
 
 export const revalidate = 120; // ISR: revalidate every 2 minutes
 
-const BASESCAN_API = "https://api.etherscan.io/v2/api";
+const ALCHEMY_API = `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
 const ZORA_1155_CREATOR = "0x777777C338d93e2C7adf08D102d45CA7CC4Ed021";
 
 // IPFS gateways to try (in order)
@@ -137,33 +137,47 @@ function ipfsToHttp(uri: string): string {
 export async function GET() {
   try {
     // Step 1: Fetch recent transactions to Zora 1155 Creator on Base
-    const apiKey = process.env.BASESCAN_API_KEY || "";
-    const params = new URLSearchParams({
-  module: "account",
-  action: "txlist",
-  address: ZORA_1155_CREATOR,
-  chainid: "8453",
-  page: "1",
-  offset: "24",
-  sort: "desc",
-  ...(apiKey && { apikey: apiKey }),
+    // SESUDAH
+const res = await fetch(ALCHEMY_API, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "alchemy_getAssetTransfers",
+    params: [{
+      toAddress: ZORA_1155_CREATOR,
+      category: ["external"],
+      maxCount: "0x18",
+      order: "desc",
+      withMetadata: true,
+    }],
+  }),
 });
+const data = await res.json();
 
-    const res = await fetch(`${BASESCAN_API}?${params}`);
-    const data = await res.json();
+if (!data.result?.transfers?.length) {
+  return NextResponse.json({
+    items: [],
+    source: "alchemy",
+    error: "No transactions found",
+  });
+}
 
-    if (data.status !== "1" || !Array.isArray(data.result)) {
-      return NextResponse.json({
-        items: [],
-        source: "basescan",
-        error: "No transactions found",
-      });
-    }
-
-    // Step 2: Process transactions - filter successful ones
-    const successfulTxs = data.result
-      .filter((tx: any) => tx.isError === "0" && tx.input && tx.input.length > 10)
-      .slice(0, 16);
+const successfulTxs = data.result.transfers
+  .filter((tx: any) => tx.hash)
+  .slice(0, 16)
+  .map((tx: any) => ({
+    hash: tx.hash,
+    from: tx.from,
+    input: "",
+    isError: "0",
+    timeStamp: tx.metadata?.blockTimestamp 
+      ? String(Math.floor(new Date(tx.metadata.blockTimestamp).getTime() / 1000))
+      : String(Math.floor(Date.now() / 1000)),
+    blockNumber: tx.blockNum,
+    to: ZORA_1155_CREATOR,
+  }));
 
     // Step 3: For each tx, try to extract IPFS CID and fetch metadata
     const items: GalleryItem[] = [];
