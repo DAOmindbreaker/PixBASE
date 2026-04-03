@@ -191,13 +191,13 @@ export default function Home() {
             </div>
             <div className="w-px h-6 bg-[#1a1a2e]" />
             <div className="text-center">
-              <p className="font-display text-sm font-bold text-base-mint">Free</p>
+              <p className="font-display text-sm font-bold text-base-mint">5x Free/Day</p>
               <p className="text-[9px] text-gray-600 uppercase tracking-wider">AI Generate</p>
             </div>
             <div className="w-px h-6 bg-[#1a1a2e]" />
             <div className="text-center">
-              <p className="font-display text-sm font-bold text-base-accent">ERC-1155</p>
-              <p className="text-[9px] text-gray-600 uppercase tracking-wider">NFT Standard</p>
+              <p className="font-display text-sm font-bold text-base-accent">$0.005</p>
+              <p className="text-[9px] text-gray-600 uppercase tracking-wider">x402 Unlimited</p>
             </div>
           </div>
         </div>

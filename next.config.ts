@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  turbopack: {},
+  serverExternalPackages: ["canvas"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "replicate.delivery" },

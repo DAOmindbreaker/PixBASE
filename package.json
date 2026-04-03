@@ -1,6 +1,6 @@
 {
   "name": "pixelon",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,8 +11,10 @@
   "dependencies": {
     "@base-org/account": "^2.5.3",
     "@coinbase/onchainkit": "^0.36.0",
-    "@coinbase/x402": "^2.1.0",
     "@tanstack/react-query": "^5.62.0",
+    "@x402/core": "^2.3.0",
+    "@x402/evm": "^2.3.0",
+    "@x402/next": "^2.3.0",
     "@zoralabs/protocol-sdk": "^0.9.0",
     "canvas": "^3.2.2",
     "next": "^15.1.0",
@@ -23,8 +25,7 @@
     "replicate": "^1.0.0",
     "siwe": "^2.3.2",
     "viem": "^2.21.0",
-    "wagmi": "^2.14.0",
-    "x402-next": "^1.1.0"
+    "wagmi": "^2.14.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

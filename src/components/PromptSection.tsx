@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { canGenerate, getRemainingGenerations, recordGeneration, getMaxGenerations } from "@/lib/rateLimit";
+import { Paywall } from "@/components/Paywall";
 
 interface PromptSectionProps {
   onImageGenerated: (imageUrl: string) => void;
@@ -21,6 +22,7 @@ export function PromptSection({ onImageGenerated, disabled }: PromptSectionProps
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const remaining = getRemainingGenerations();
   const maxGen = getMaxGenerations();
@@ -28,13 +30,14 @@ export function PromptSection({ onImageGenerated, disabled }: PromptSectionProps
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     if (!canGenerate()) {
-      setError(`Daily limit reached (${maxGen}/${maxGen}). Try again tomorrow!`);
+      setShowPaywall(true);
       return;
     }
 
     setIsGenerating(true);
     setError(null);
     setProgress(0);
+    setShowPaywall(false);
 
     const progressInterval = setInterval(() => {
       setProgress((p) => Math.min(p + Math.random() * 8, 90));
@@ -48,6 +51,15 @@ export function PromptSection({ onImageGenerated, disabled }: PromptSectionProps
       });
 
       const data = await res.json();
+
+      // Server-side rate limit hit
+      if (res.status === 429) {
+        setShowPaywall(true);
+        setIsGenerating(false);
+        setProgress(0);
+        clearInterval(progressInterval);
+        return;
+      }
 
       if (!res.ok || data.error) {
         throw new Error(data.error || "Generation failed");
@@ -178,6 +190,15 @@ export function PromptSection({ onImageGenerated, disabled }: PromptSectionProps
           </svg>
           <p className="text-xs text-red-400">{error}</p>
         </div>
+      )}
+
+      {/* Paywall */}
+      {showPaywall && (
+        <Paywall
+          remaining={remaining}
+          total={maxGen}
+          onClose={() => setShowPaywall(false)}
+        />
       )}
     </div>
   );
