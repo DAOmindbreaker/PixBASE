@@ -139,14 +139,15 @@ export async function GET() {
     // Step 1: Fetch recent transactions to Zora 1155 Creator on Base
     const apiKey = process.env.BASESCAN_API_KEY || "";
     const params = new URLSearchParams({
-      module: "account",
-      action: "txlist",
-      address: ZORA_1155_CREATOR,
-      page: "1",
-      offset: "24",
-      sort: "desc",
-      ...(apiKey && { apikey: apiKey }),
-    });
+  module: "account",
+  action: "txlist",
+  address: ZORA_1155_CREATOR,
+  chainid: "8453",
+  page: "1",
+  offset: "24",
+  sort: "desc",
+  ...(apiKey && { apikey: apiKey }),
+});
 
     const res = await fetch(`${BASESCAN_API}?${params}`);
     const data = await res.json();
