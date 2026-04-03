@@ -15,7 +15,7 @@ import { NextResponse } from "next/server";
 
 export const revalidate = 120; // ISR: revalidate every 2 minutes
 
-const BASESCAN_API = "https://api.basescan.org/api";
+const BASESCAN_API = "https://api.etherscan.io/v2/api";
 const ZORA_1155_CREATOR = "0x777777C338d93e2C7adf08D102d45CA7CC4Ed021";
 
 // IPFS gateways to try (in order)
