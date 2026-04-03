@@ -1,24 +1,10 @@
 import { NextResponse } from "next/server";
 
-/**
- * GET /api/gallery
- * 
- * Fetch recent NFT creations directly from Base chain.
- * 
- * Strategy:
- * 1. Basescan API → get recent txs to Zora 1155 Creator on Base
- * 2. For each tx → decode the contractURI (IPFS link) from input data
- * 3. Fetch metadata JSON from IPFS gateway → get image, name, attributes
- * 
- * No Zora API needed. Pure Base chain data.
- */
-
-export const revalidate = 120; // ISR: revalidate every 2 minutes
+export const revalidate = 120;
 
 const ALCHEMY_API = `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
 const ZORA_1155_CREATOR = "0x777777C338d93e2C7adf08D102d45CA7CC4Ed021";
 
-// IPFS gateways to try (in order)
 const IPFS_GATEWAYS = [
   "https://gateway.pinata.cloud/ipfs/",
   "https://ipfs.io/ipfs/",
@@ -44,45 +30,27 @@ interface GalleryItem {
   };
 }
 
-/**
- * Try to extract IPFS CID from transaction input data.
- * The createContract call has contractURI as first string param (ipfs://...)
- */
 function extractIPFSFromInput(input: string): string | null {
   try {
-    // Look for "ipfs://" pattern in the hex-decoded input data
-    // The contractURI is typically the first string argument
-    const hex = input.slice(2); // remove 0x
-
-    // Search for the ipfs:// prefix in UTF-8 decoded segments
-    // "ipfs://" in hex = 697066733a2f2f
+    const hex = input.slice(2);
     const ipfsMarker = "697066733a2f2f";
     const markerIdx = hex.indexOf(ipfsMarker);
-
     if (markerIdx === -1) return null;
-
-    // Extract CID after "ipfs://" - CIDs are typically 46 chars (CIDv0) or longer (CIDv1)
     const afterMarker = hex.slice(markerIdx + ipfsMarker.length);
-
-    // Read until we hit a null byte (00) or non-alphanumeric hex
     let cidHex = "";
     for (let i = 0; i < afterMarker.length; i += 2) {
       const byte = parseInt(afterMarker.slice(i, i + 2), 16);
-      // CID chars: alphanumeric (A-Z a-z 0-9) 
       if (
-        (byte >= 48 && byte <= 57) ||  // 0-9
-        (byte >= 65 && byte <= 90) ||  // A-Z
-        (byte >= 97 && byte <= 122)    // a-z
+        (byte >= 48 && byte <= 57) ||
+        (byte >= 65 && byte <= 90) ||
+        (byte >= 97 && byte <= 122)
       ) {
         cidHex += afterMarker.slice(i, i + 2);
       } else {
         break;
       }
     }
-
-    if (cidHex.length < 20) return null; // Too short for a CID
-
-    // Convert hex to string
+    if (cidHex.length < 20) return null;
     const cid = Buffer.from(cidHex, "hex").toString("utf-8");
     return cid.length >= 10 ? cid : null;
   } catch {
@@ -90,106 +58,96 @@ function extractIPFSFromInput(input: string): string | null {
   }
 }
 
-/**
- * Fetch metadata JSON from IPFS, trying multiple gateways.
- */
 async function fetchIPFSMetadata(cid: string): Promise<any | null> {
   for (const gateway of IPFS_GATEWAYS) {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
-
-      const res = await fetch(`${gateway}${cid}`, {
-        signal: controller.signal,
-      });
+      const res = await fetch(`${gateway}${cid}`, { signal: controller.signal });
       clearTimeout(timeout);
-
       if (res.ok) {
         const contentType = res.headers.get("content-type") || "";
         if (contentType.includes("json") || contentType.includes("text")) {
-          const json = await res.json();
-          return json;
+          return await res.json();
         }
       }
     } catch {
-      // Try next gateway
       continue;
     }
   }
   return null;
 }
 
-/**
- * Convert IPFS URI to HTTP URL via gateway.
- */
 function ipfsToHttp(uri: string): string {
   if (!uri) return "";
-  if (uri.startsWith("ipfs://")) {
-    return `${IPFS_GATEWAYS[0]}${uri.slice(7)}`;
-  }
-  if (uri.startsWith("https://") || uri.startsWith("http://")) {
-    return uri;
-  }
-  // Bare CID
+  if (uri.startsWith("ipfs://")) return `${IPFS_GATEWAYS[0]}${uri.slice(7)}`;
+  if (uri.startsWith("https://") || uri.startsWith("http://")) return uri;
   return `${IPFS_GATEWAYS[0]}${uri}`;
+}
+
+async function alchemyPost(method: string, params: any[]) {
+  const res = await fetch(ALCHEMY_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  });
+  return res.json();
 }
 
 export async function GET() {
   try {
-    // Step 1: Fetch recent transactions to Zora 1155 Creator on Base
-    // SESUDAH
-const res = await fetch(ALCHEMY_API, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    jsonrpc: "2.0",
-    id: 1,
-    method: "alchemy_getAssetTransfers",
-    params: [{
+    // Step 1: Get recent transfers to Zora 1155 Creator
+    const transferData = await alchemyPost("alchemy_getAssetTransfers", [{
       toAddress: ZORA_1155_CREATOR,
       category: ["external"],
-      maxCount: "0x18",
+      maxCount: "0x10",
       order: "desc",
       withMetadata: true,
-    }],
-  }),
-});
-const data = await res.json();
+    }]);
 
-if (!data.result?.transfers?.length) {
-  return NextResponse.json({
-    items: [],
-    source: "alchemy",
-    error: "No transactions found",
-  });
-}
+    if (!transferData.result?.transfers?.length) {
+      return NextResponse.json({ items: [], source: "alchemy", error: "No transactions found" });
+    }
 
-const successfulTxs = data.result.transfers
-  .filter((tx: any) => tx.hash)
-  .slice(0, 16)
-  .map((tx: any) => ({
-    hash: tx.hash,
-    from: tx.from,
-    input: "",
-    isError: "0",
-    timeStamp: tx.metadata?.blockTimestamp 
-      ? String(Math.floor(new Date(tx.metadata.blockTimestamp).getTime() / 1000))
-      : String(Math.floor(Date.now() / 1000)),
-    blockNumber: tx.blockNum,
-    to: ZORA_1155_CREATOR,
-  }));
+    const transfers = transferData.result.transfers
+      .filter((tx: any) => tx.hash)
+      .slice(0, 16);
 
-    // Step 3: For each tx, try to extract IPFS CID and fetch metadata
+    // Step 2: Fetch full tx data to get input (for IPFS extraction)
+    const fullTxs = await Promise.all(
+      transfers.map(async (tx: any) => {
+        try {
+          const txData = await alchemyPost("eth_getTransactionByHash", [tx.hash]);
+          return {
+            hash: tx.hash,
+            from: tx.from,
+            input: txData.result?.input || "",
+            timeStamp: tx.metadata?.blockTimestamp
+              ? String(Math.floor(new Date(tx.metadata.blockTimestamp).getTime() / 1000))
+              : String(Math.floor(Date.now() / 1000)),
+            blockNumber: parseInt(tx.blockNum, 16),
+            to: ZORA_1155_CREATOR,
+          };
+        } catch {
+          return {
+            hash: tx.hash,
+            from: tx.from,
+            input: "",
+            timeStamp: String(Math.floor(Date.now() / 1000)),
+            blockNumber: 0,
+            to: ZORA_1155_CREATOR,
+          };
+        }
+      })
+    );
+
+    // Step 3: Extract IPFS metadata for each tx
     const items: GalleryItem[] = [];
 
-    // Process in parallel with concurrency limit
-    const metadataPromises = successfulTxs.map(async (tx: any, idx: number) => {
+    const metadataPromises = fullTxs.map(async (tx: any, idx: number) => {
       const cid = extractIPFSFromInput(tx.input);
       let metadata: any = null;
-
-      if (cid) {
-        metadata = await fetchIPFSMetadata(cid);
-      }
+      if (cid) metadata = await fetchIPFSMetadata(cid);
 
       const item: GalleryItem = {
         id: tx.hash,
@@ -200,17 +158,13 @@ const successfulTxs = data.result.transfers
         contractAddress: tx.to || ZORA_1155_CREATOR,
         txHash: tx.hash,
         timestamp: new Date(parseInt(tx.timeStamp) * 1000).toISOString(),
-        blockNumber: parseInt(tx.blockNumber),
+        blockNumber: tx.blockNumber,
         mintInfo: {},
       };
 
-      // Extract Pixelon-specific attributes if available
       if (metadata?.attributes && Array.isArray(metadata.attributes)) {
         const getAttr = (name: string) =>
-          metadata.attributes.find(
-            (a: any) => a.trait_type === name
-          )?.value?.toString();
-
+          metadata.attributes.find((a: any) => a.trait_type === name)?.value?.toString();
         item.mintInfo = {
           pixelSize: getAttr("Pixel Size"),
           colorPalette: getAttr("Color Palette"),
@@ -223,14 +177,10 @@ const successfulTxs = data.result.transfers
     });
 
     const results = await Promise.allSettled(metadataPromises);
-
     for (const result of results) {
-      if (result.status === "fulfilled") {
-        items.push(result.value);
-      }
+      if (result.status === "fulfilled") items.push(result.value);
     }
 
-    // Count how many have real images
     const withImages = items.filter((i) => i.imageUrl).length;
 
     return NextResponse.json({
@@ -240,14 +190,11 @@ const successfulTxs = data.result.transfers
       withImages,
       timestamp: new Date().toISOString(),
     });
+
   } catch (err) {
     console.error("Gallery API error:", err);
     return NextResponse.json(
-      {
-        items: [],
-        source: "error",
-        error: err instanceof Error ? err.message : "Failed to fetch",
-      },
+      { items: [], source: "error", error: err instanceof Error ? err.message : "Failed to fetch" },
       { status: 500 }
     );
   }
