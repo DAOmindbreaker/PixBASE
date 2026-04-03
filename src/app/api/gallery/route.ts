@@ -137,7 +137,7 @@ function ipfsToHttp(uri: string): string {
 export async function GET() {
   try {
     // Step 1: Fetch recent transactions to Zora 1155 Creator on Base
-    const apiKey = process.env.NEXT_PUBLIC_BASESCAN_API_KEY || "";
+    const apiKey = process.env.BASESCAN_API_KEY || "";
     const params = new URLSearchParams({
       module: "account",
       action: "txlist",
