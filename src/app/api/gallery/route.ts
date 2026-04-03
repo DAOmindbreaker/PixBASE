@@ -17,13 +17,12 @@ function ipfsToHttp(uri: string): string {
 
 export async function GET() {
   try {
-    // Zora GraphQL API - free, no API key needed
+    // Zora GraphQL - recent mints on Base, no collection filter
     const query = `{
       tokens(
         networks: [{network: BASE, chain: BASE_MAINNET}]
         pagination: {limit: 16}
         sort: {sortKey: CREATED, sortDirection: DESC}
-        where: {collectionAddresses: ["0x777777C338d93e2C7adf08D102d45CA7CC4Ed021"]}
       ) {
         nodes {
           token {
@@ -46,6 +45,13 @@ export async function GET() {
     });
 
     const data = await res.json();
+
+    // Log error if any
+    if (data.errors) {
+      console.error("Zora API errors:", JSON.stringify(data.errors));
+      return NextResponse.json({ items: [], source: "zora", error: data.errors[0]?.message });
+    }
+
     const nodes = data?.data?.tokens?.nodes || [];
 
     if (!nodes.length) {
